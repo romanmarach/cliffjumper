@@ -1,26 +1,48 @@
 package com.example.groupproject_m2.ui.theme
 
-import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = Green80,
+    onPrimary = Green40,
+    primaryContainer = Color(0xFF1E4623),
+    onPrimaryContainer = Color(0xFFC8F2C9),
+    secondary = GreenGrey80,
+    onSecondary = Color(0xFF223224),
+    secondaryContainer = Color(0xFF324A35),
+    onSecondaryContainer = Color(0xFFD3E9D0),
+    tertiary = Mint80,
+    onTertiary = Color(0xFF1F3A20),
+    tertiaryContainer = Color(0xFF2D5A31),
+    onTertiaryContainer = Color(0xFFDDF5DD),
+    background = Color(0xFF0F1510),
+    onBackground = Color(0xFFE6F1E5),
+    surface = Color(0xFF121912),
+    onSurface = Color(0xFFE6F1E5)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = Green40,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFC8E6C9),
+    onPrimaryContainer = Color(0xFF163A19),
+    secondary = GreenGrey40,
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFDCEDC8),
+    onSecondaryContainer = Color(0xFF243A27),
+    tertiary = Mint40,
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFE8F5E9),
+    onTertiaryContainer = Color(0xFF1E3D22),
+    background = Color(0xFFF1F8E9),
+    onBackground = Color(0xFF1A2B1B),
+    surface = Color(0xFFECF7E7),
+    onSurface = Color(0xFF1A2B1B)
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -36,19 +58,9 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun GroupProject_m2Theme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,
