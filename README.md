@@ -95,8 +95,8 @@ Users can also contribute by adding new cliff jumping spots and rating existing 
 - Set up Firebase authentication for user login and registration
 - Connected successful login/registration flow to main screen with bottom navigation
 
-[Add giphy that shows current build progress for Milestone 2. Note: We will be looking for progression of work between Milestone 2 and 3. Make sure your giphys are not duplicated and clearly show the change from Sprint 1 to 2.]
-<img src="YOUR_GIF_URL" width=600>
+![Image](https://github.com/user-attachments/assets/849de083-ad35-4d8f-b3da-aeb732691eb0)
+
 
 
 # Milestone 3 - Build Sprint 2 (Unit 9)
