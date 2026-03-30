@@ -81,7 +81,7 @@ Users can also contribute by adding new cliff jumping spots and rating existing 
 
 ## GitHub Project board
 
-<img width="1023" height="424" alt="Image" src="https://github.com/user-attachments/assets/3a57e94d-eb61-47e3-9f77-f257e59003d7" />
+<img width="1138" height="600" alt="Image" src="https://github.com/user-attachments/assets/aa5dbc53-0bd7-4bef-ba10-35a6e397c77d" />
 
 ## Issue cards
 
