@@ -1,5 +1,5 @@
 package com.example.groupproject_m2
-
+import androidx.compose.foundation.layout.Box
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -321,10 +321,13 @@ fun GroupProject_m2App(
                 )
             }
         ) { innerPadding ->
-            Greeting(
-                name = "Jumper",
-                modifier = Modifier.padding(innerPadding)
-            )
+            Box(modifier = Modifier.padding(innerPadding)) {
+                when (currentDestination) {
+                    AppDestinations.HOME -> MapScreen()
+                    AppDestinations.FAVORITES -> Text("Liked Screen - Coming Soon")
+                    AppDestinations.PROFILE -> Text("Profile Screen - Coming Soon")
+                }
+            }
         }
     }
 }
