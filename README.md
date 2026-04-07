@@ -101,19 +101,27 @@ Users can also contribute by adding new cliff jumping spots and rating existing 
 
 # Milestone 3 - Build Sprint 2 (Unit 9)
 
-## GitHub Project board
+## GitHub Project Board
 
-[Add screenshot of your Project Board with the updated status of issues for Milestone 3. Note that these should include the updated issues you worked on for this sprint and not be a duplicate of Milestone 2 Project board.] <img src="YOUR_WIREFRAME_IMAGE_URL" width=600>
+<img width="1099" alt="Project Board Milestone 3" src="https://github.com/user-attachments/assets/e08675b5-c1bd-403c-9d6c-dd87f5a02ade" />
 
-## Completed user stories
+<img width="1205" alt="Project Board Milestone 3 Issues" src="https://github.com/user-attachments/assets/44c2c097-dabc-484a-bbab-13dd65143b2c" />
 
-- List the completed user stories from this unit
-- List any pending user stories / any user stories you decided to cut
-from the original requirements
+## Completed User Stories
+
+**Completed this sprint:**
+- User can view an interactive map displaying cliff jumping spots
+- User can view a list of cliff jumping spots
+
+**Pending / Cut user stories:**
+- User can add a new cliff jumping spot (pending)
+- User can view their profile (pending)
+- Rating spots 1–5 stars — optional feature, cut due to time constraints
+- Uploading photos to a spot — optional feature, cut due to time constraints
 
 [Add video/gif of your current application that shows build progress]
-<img src="YOUR_WIREFRAME_IMAGE_URL" width=600>
+<img src="YOUR_APP_GIF_URL" width=600>
 
 ## App Demo Video
 
-- Embed the YouTube/Vimeo link of your Completed Demo Day prep video
+- Embed the YouTube/Vimeo link of your Completed Demo Day prep videoo link of your Completed Demo Day prep video
