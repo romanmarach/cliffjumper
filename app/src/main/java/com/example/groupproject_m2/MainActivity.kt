@@ -1,4 +1,5 @@
 package com.example.groupproject_m2
+
 import androidx.compose.foundation.layout.Box
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -290,42 +291,54 @@ fun GroupProject_m2App(
     onLogoutClick: () -> Unit
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
+    var selectedSpot by remember { mutableStateOf<CliffSpot?>(null) }
 
-    NavigationSuiteScaffold(
-        navigationSuiteItems = {
-            AppDestinations.entries.forEach {
-                item(
-                    icon = {
-                        Icon(
-                            it.icon,
-                            contentDescription = it.label
-                        )
-                    },
-                    label = { Text(it.label) },
-                    selected = it == currentDestination,
-                    onClick = { currentDestination = it }
-                )
+    if (selectedSpot != null) {
+        DetailScreen(
+            spot = selectedSpot!!,
+            weatherApiKey = "af5cdfa47871a592fb68ea185f67f94b",
+            onBackClick = { selectedSpot = null }
+        )
+    } else {
+        NavigationSuiteScaffold(
+            navigationSuiteItems = {
+                AppDestinations.entries.forEach {
+                    item(
+                        icon = { Icon(it.icon, contentDescription = it.label) },
+                        label = { Text(it.label) },
+                        selected = it == currentDestination,
+                        onClick = { currentDestination = it }
+                    )
+                }
             }
-        }
-    ) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            topBar = {
-                TopAppBar(
-                    title = { Text("groupProject_m2") },
-                    actions = {
-                        TextButton(onClick = onLogoutClick) {
-                            Text("Log out")
+        ) {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                topBar = {
+                    TopAppBar(
+                        title = { Text("Cliff Jumper") },
+                        actions = {
+                            TextButton(onClick = onLogoutClick) {
+                                Text("Log out")
+                            }
                         }
+                    )
+                }
+            ) { innerPadding ->
+                Box(modifier = Modifier.padding(innerPadding)) {
+                    when (currentDestination) {
+                        AppDestinations.HOME -> MapScreen(
+                            onSpotClick = { spot -> selectedSpot = spot }
+                        )
+                        AppDestinations.FAVORITES -> Text(
+                            "Liked Screen - Coming Soon",
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        AppDestinations.PROFILE -> Text(
+                            "Profile Screen - Coming Soon",
+                            modifier = Modifier.padding(16.dp)
+                        )
                     }
-                )
-            }
-        ) { innerPadding ->
-            Box(modifier = Modifier.padding(innerPadding)) {
-                when (currentDestination) {
-                    AppDestinations.HOME -> MapScreen()
-                    AppDestinations.FAVORITES -> Text("Liked Screen - Coming Soon")
-                    AppDestinations.PROFILE -> Text("Profile Screen - Coming Soon")
                 }
             }
         }
@@ -339,14 +352,6 @@ enum class AppDestinations(
     HOME("Map", Icons.Default.Public),
     FAVORITES("Liked", Icons.Default.Favorite),
     PROFILE("Profile", Icons.Default.AccountBox),
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Welcome to our cliff locater app",
-        modifier = modifier
-    )
 }
 
 @Preview(showBackground = true)
