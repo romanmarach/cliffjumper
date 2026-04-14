@@ -104,14 +104,14 @@ Users can also contribute by adding new cliff jumping spots and rating existing 
 ## GitHub Project Board
 
 <img width="1099" alt="Project Board Milestone 3" src="https://github.com/user-attachments/assets/e08675b5-c1bd-403c-9d6c-dd87f5a02ade" />
-
 <img width="1205" alt="Project Board Milestone 3 Issues" src="https://github.com/user-attachments/assets/44c2c097-dabc-484a-bbab-13dd65143b2c" />
 
 ## Completed User Stories
 
 **Completed this sprint:**
 - User can view an interactive map displaying cliff jumping spots
-- User can view a list of cliff jumping spots
+- User can view a list of cliff jumping spots sorted by distance from current location
+- User can tap a cliff spot to view a detail screen with live weather, safety score, and physics calculations
 
 **Pending / Cut user stories:**
 - User can add a new cliff jumping spot (pending)
@@ -119,9 +119,4 @@ Users can also contribute by adding new cliff jumping spots and rating existing 
 - Rating spots 1–5 stars — optional feature, cut due to time constraints
 - Uploading photos to a spot — optional feature, cut due to time constraints
 
-[Add video/gif of your current application that shows build progress]
-<img src="YOUR_APP_GIF_URL" width=600>
-
-## App Demo Video
-
-- Embed the YouTube/Vimeo link of your Completed Demo Day prep videoo link of your Completed Demo Day prep video
+![Image](https://github.com/user-attachments/assets/508dd964-7c4c-4ec5-87ed-3dae7bfead4d)
