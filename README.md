@@ -122,3 +122,6 @@ Users can also contribute by adding new cliff jumping spots and rating existing 
 - Uploading photos to a spot — optional feature, cut due to time constraints
 
 ![Image](https://github.com/user-attachments/assets/508dd964-7c4c-4ec5-87ed-3dae7bfead4d)
+
+![Animation_ms3](https://github.com/user-attachments/assets/58ada9c5-2c3f-400a-9272-dae94db23212)
+
