@@ -330,10 +330,7 @@ fun GroupProject_m2App(
                         AppDestinations.HOME -> MapScreen(
                             onSpotClick = { spot -> selectedSpot = spot }
                         )
-                        AppDestinations.FAVORITES -> Text(
-                            "Liked Screen - Coming Soon",
-                            modifier = Modifier.padding(16.dp)
-                        )
+                        AppDestinations.FAVORITES -> PressureMeasurementScreen()
                         AppDestinations.PROFILE -> Text(
                             "Profile Screen - Coming Soon",
                             modifier = Modifier.padding(16.dp)
@@ -377,3 +374,5 @@ fun AppPreview() {
         GroupProject_m2App(onLogoutClick = {})
     }
 }
+
+
