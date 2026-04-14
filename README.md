@@ -112,7 +112,7 @@ Users can also contribute by adding new cliff jumping spots and rating existing 
 - User can view an interactive map displaying cliff jumping spots
 - User can view a list of cliff jumping spots sorted by distance from current location
 - User can tap a cliff spot to view a detail screen with live weather, safety score, and physics calculations
-- Built a new pressure-based cliff height tool on the Liked tab with Pressure 1, Pressure 2, estimated height output, and Reset
+- Built a new pressure-based cliff height tool on the Liked tab with Pressure 1, Pressure 2, estimated height output, and Reset(currenly under "liked" page)
 - Implemented barometer capture flow using Android TYPE_PRESSURE, including on-button error handling for unsupported devices.
 
 **Pending / Cut user stories:**
