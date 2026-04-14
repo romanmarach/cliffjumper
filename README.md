@@ -125,3 +125,5 @@ Users can also contribute by adding new cliff jumping spots and rating existing 
 
 ![Animation_ms3](https://github.com/user-attachments/assets/58ada9c5-2c3f-400a-9272-dae94db23212)
 
+Link to Demo Day Prep video: https://www.loom.com/share/453d39c891ab4ecb8861b3c628e37370
+
