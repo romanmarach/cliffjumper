@@ -12,9 +12,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material.icons.Icons
+import android.content.Intent
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Public
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -290,6 +293,7 @@ fun LoginScreen(
 fun GroupProject_m2App(
     onLogoutClick: () -> Unit
 ) {
+    val context = LocalContext.current
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
     var selectedSpot by remember { mutableStateOf<CliffSpot?>(null) }
 
@@ -307,7 +311,18 @@ fun GroupProject_m2App(
                         icon = { Icon(it.icon, contentDescription = it.label) },
                         label = { Text(it.label) },
                         selected = it == currentDestination,
-                        onClick = { currentDestination = it }
+                        onClick = {
+                            if (it == AppDestinations.REELS) {
+                                context.startActivity(
+                                    Intent(context, ReelsActivity::class.java).apply {
+                                        putExtra(ReelsActivity.EXTRA_SPOT_NAME, "cliff jumping water")
+                                        putExtra(ReelsActivity.EXTRA_SPOT_LOCATION, "")
+                                    }
+                                )
+                            } else {
+                                currentDestination = it
+                            }
+                        }
                     )
                 }
             }
@@ -331,6 +346,7 @@ fun GroupProject_m2App(
                             onSpotClick = { spot -> selectedSpot = spot }
                         )
                         AppDestinations.FAVORITES -> PressureMeasurementScreen()
+                        AppDestinations.REELS -> { /* launched as Activity, nothing to render */ }
                         AppDestinations.PROFILE -> Text(
                             "Profile Screen - Coming Soon",
                             modifier = Modifier.padding(16.dp)
@@ -348,6 +364,7 @@ enum class AppDestinations(
 ) {
     HOME("Map", Icons.Default.Public),
     FAVORITES("Liked", Icons.Default.Favorite),
+    REELS("Explore", Icons.Default.PlayCircle),
     PROFILE("Profile", Icons.Default.AccountBox),
 }
 

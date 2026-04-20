@@ -21,6 +21,12 @@
             android:value="${MAPS_API_KEY}"/>
 
         <activity
+            android:name=".ReelsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.GroupProject_m2.Reels" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"

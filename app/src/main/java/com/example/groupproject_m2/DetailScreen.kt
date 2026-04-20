@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Air
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -110,6 +112,7 @@ fun DetailScreen(
     weatherApiKey: String,
     onBackClick: () -> Unit
 ) {
+    val context = LocalContext.current
     var weatherData by remember { mutableStateOf<WeatherData?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var isSaved by remember { mutableStateOf(false) }
@@ -308,6 +311,27 @@ fun DetailScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("t = √(2h/g)   ·   v = √(2gh)", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f), modifier = Modifier.align(Alignment.CenterHorizontally), letterSpacing = 1.sp)
                     }
+                }
+
+                // Watch Reels Button
+                Button(
+                    onClick = { ReelsActivity.start(context, spot.name, spot.location) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCC0000))
+                ) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Watch Reels",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
