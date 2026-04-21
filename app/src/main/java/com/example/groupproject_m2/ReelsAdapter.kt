@@ -1,143 +1,127 @@
 package com.example.groupproject_m2
 
-import android.util.Log
+import android.annotation.SuppressLint
 import android.util.SparseArray
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ProgressBar
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.TextView
-import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.RecyclerView
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 
 class ReelsAdapter(
-    private val lifecycleOwner: LifecycleOwner,
-    private var videoIds: List<String>,
+    private val videoIds: List<String>,
     private val spotName: String,
-    private val spotLocation: String,
-    private val onVideoError: (position: Int) -> Unit = {}
+    private val spotLocation: String
 ) : RecyclerView.Adapter<ReelsAdapter.ReelViewHolder>() {
 
-    // Tracks the YouTubePlayer for each currently-bound position
-    private val activePlayers = SparseArray<YouTubePlayer>()
+    private val activeWebViews = SparseArray<WebView>()
     var currentPosition = 0
 
     inner class ReelViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val playerView: YouTubePlayerView = view.findViewById(R.id.youtubePlayerView)
-        val loadingIndicator: ProgressBar = view.findViewById(R.id.itemLoadingIndicator)
+        val webView: WebView = view.findViewById(R.id.webView)
         val tvSpotName: TextView = view.findViewById(R.id.tvSpotName)
         val tvSpotLocation: TextView = view.findViewById(R.id.tvSpotLocation)
 
-        // Set once in onCreateViewHolder via onReady; null until the WebView is ready
-        var youTubePlayer: YouTubePlayer? = null
-
-        // If bind() is called before onReady fires, we park the request here
-        var pendingVideoId: String? = null
+        init {
+            configureWebView(webView)
+        }
 
         fun bind(videoId: String, position: Int) {
             tvSpotName.text = spotName
             tvSpotLocation.text = spotLocation
-
-            val player = youTubePlayer
-            if (player != null) {
-                // Player already ready — load/cue immediately
-                activePlayers.put(position, player)
-                if (position == currentPosition) {
-                    player.loadVideo(videoId, 0f)
-                } else {
-                    player.cueVideo(videoId, 0f)
-                }
-                pendingVideoId = null
-            } else {
-                // onReady hasn't fired yet — park until it does
-                loadingIndicator.visibility = View.VISIBLE
-                pendingVideoId = videoId
+            activeWebViews.put(position, webView)
+            if (position == currentPosition) {
+                loadEmbed(webView, videoId)
             }
+            // Off-screen pages stay blank until playAt() scrolls to them
+        }
+
+        fun blank() {
+            webView.loadUrl("about:blank")
+        }
+
+        fun destroy() {
+            webView.loadUrl("about:blank")
+            webView.stopLoading()
+            webView.destroy()
         }
     }
 
-    // initialize() is called here — exactly once per ViewHolder instance
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun configureWebView(webView: WebView) {
+        webView.settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            allowContentAccess = true
+            allowFileAccess = true
+            mediaPlaybackRequiresUserGesture = false
+            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            loadWithOverviewMode = true
+            useWideViewPort = true
+            userAgentString =
+                "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+        }
+        webView.webViewClient = WebViewClient()
+        webView.webChromeClient = WebChromeClient()
+    }
+
+    private fun embedUrl(videoId: String) =
+        "https://www.youtube.com/watch?v=$videoId"
+
+    private fun loadEmbed(webView: WebView, videoId: String) {
+        webView.loadUrl(embedUrl(videoId))
+    }
+
+    fun playAt(position: Int) {
+        val previous = currentPosition
+        currentPosition = position
+        if (previous != position) {
+            activeWebViews[previous]?.loadUrl("about:blank")
+        }
+        val webView = activeWebViews[position]
+        if (webView != null && position < videoIds.size) {
+            loadEmbed(webView, videoIds[position])
+        }
+    }
+
+    fun pauseAll() {
+        for (i in 0 until activeWebViews.size()) {
+            activeWebViews.valueAt(i).loadUrl("about:blank")
+        }
+    }
+
+    fun destroyAll() {
+        for (i in 0 until activeWebViews.size()) {
+            activeWebViews.valueAt(i).apply {
+                loadUrl("about:blank")
+                stopLoading()
+                destroy()
+            }
+        }
+        activeWebViews.clear()
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ReelViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_reel, parent, false)
-        val holder = ReelViewHolder(view)
-
-        lifecycleOwner.lifecycle.addObserver(holder.playerView)
-
-        holder.playerView.enableAutomaticInitialization = false
-        try {
-            holder.playerView.initialize(object : AbstractYouTubePlayerListener() {
-            override fun onReady(youTubePlayer: YouTubePlayer) {
-                holder.youTubePlayer = youTubePlayer
-                holder.loadingIndicator.visibility = View.GONE
-
-                // Deliver any video request that arrived before we were ready
-                val videoId = holder.pendingVideoId ?: return
-                val position = holder.bindingAdapterPosition
-                    .takeIf { it != RecyclerView.NO_POSITION } ?: return
-
-                holder.pendingVideoId = null
-                activePlayers.put(position, youTubePlayer)
-                if (position == currentPosition) {
-                    youTubePlayer.loadVideo(videoId, 0f)
-                } else {
-                    youTubePlayer.cueVideo(videoId, 0f)
-                }
-            }
-
-            override fun onError(youTubePlayer: YouTubePlayer, error: PlayerConstants.PlayerError) {
-                val position = holder.bindingAdapterPosition
-                    .takeIf { it != RecyclerView.NO_POSITION } ?: return
-                Log.w(TAG, "Player error at position $position: $error")
-                onVideoError(position)
-            }
-        }) } catch (e: Exception) {
-            Log.e(TAG, "initialize() failed — already initialized? $e")
-        }
-
-        return holder
+        return ReelViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: ReelViewHolder, position: Int) {
         holder.bind(videoIds[position], position)
     }
 
-    // Pause and clear tracking when a ViewHolder scrolls off screen.
-    // Do NOT release the player — the ViewHolder and its initialized player
-    // will be reused via onBindViewHolder, not onCreateViewHolder.
     override fun onViewRecycled(holder: ReelViewHolder) {
         super.onViewRecycled(holder)
         val pos = holder.bindingAdapterPosition
         if (pos != RecyclerView.NO_POSITION) {
-            activePlayers.remove(pos)
+            activeWebViews.remove(pos)
         }
-        holder.youTubePlayer?.pause()
-        holder.pendingVideoId = null
+        holder.blank()
     }
-
-    fun playAt(position: Int) {
-        currentPosition = position
-        for (i in 0 until activePlayers.size()) {
-            val pos = activePlayers.keyAt(i)
-            val player = activePlayers.valueAt(i)
-            if (pos == position) player.play() else player.pause()
-        }
-    }
-
-    fun pauseAll() {
-        for (i in 0 until activePlayers.size()) {
-            activePlayers.valueAt(i).pause()
-        }
-    }
-
-    fun getVideoIds(): List<String> = videoIds
 
     override fun getItemCount() = videoIds.size
-
-    companion object {
-        private const val TAG = "ReelsAdapter"
-    }
 }

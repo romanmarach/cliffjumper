@@ -1,14 +1,21 @@
 package com.example.groupproject_m2
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.location.Geocoder
+import android.location.Location
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.example.groupproject_m2.databinding.FragmentReelsBinding
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.tasks.Tasks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -16,6 +23,8 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 class ReelsFragment : Fragment() {
 
@@ -41,7 +50,6 @@ class ReelsFragment : Fragment() {
             Log.d(TAG, "Args — spotName='$spotName' spotLocation='$spotLocation'")
 
             val reelsAdapter = ReelsAdapter(
-                lifecycleOwner = viewLifecycleOwner,
                 videoIds = emptyList(),
                 spotName = spotName,
                 spotLocation = spotLocation
@@ -77,15 +85,20 @@ class ReelsFragment : Fragment() {
         lifecycleScope.launch {
             try {
                 val apiKey = BuildConfig.YOUTUBE_API_KEY
-                Log.d(TAG, "API key present: ${apiKey.isNotBlank()}")
                 if (apiKey.isBlank()) {
                     showError("YouTube API key not configured.\nAdd YOUTUBE_API_KEY to local.properties.")
                     return@launch
                 }
 
-                val query = listOf(spotName, spotLocation)
-                    .filter { it.isNotBlank() }
-                    .joinToString(" ")
+                // If launched from Explore tab (no spot), resolve device location
+                val (query, displayName, displayLocation) =
+                    if (spotName.isBlank() && spotLocation.isBlank()) {
+                        resolveLocationQuery()
+                    } else {
+                        val q = listOf(spotName, spotLocation)
+                            .filter { it.isNotBlank() }.joinToString(" ")
+                        Triple(q, spotName, spotLocation)
+                    }
                 Log.d(TAG, "Fetching videos for query: '$query'")
 
                 val videoIds = fetchYouTubeVideos(query, apiKey)
@@ -93,20 +106,12 @@ class ReelsFragment : Fragment() {
 
                 _binding?.loadingContainer?.visibility = View.GONE
                 if (videoIds.isEmpty()) {
-                    showError("No videos found for this spot.\nTry another location.")
+                    showError("No videos found.\nTry another location.")
                 } else {
                     val freshAdapter = ReelsAdapter(
-                        lifecycleOwner = viewLifecycleOwner,
                         videoIds = videoIds,
-                        spotName = spotName,
-                        spotLocation = spotLocation,
-                        onVideoError = { errorPosition ->
-                            val next = errorPosition + 1
-                            Log.d(TAG, "Video error at $errorPosition — advancing to $next")
-                            if (next < (adapter?.itemCount ?: 0)) {
-                                _binding?.viewPager?.setCurrentItem(next, true)
-                            }
-                        }
+                        spotName = displayName,
+                        spotLocation = displayLocation
                     )
                     adapter = freshAdapter
                     _binding?.viewPager?.adapter = freshAdapter
@@ -117,6 +122,40 @@ class ReelsFragment : Fragment() {
             }
         }
     }
+
+    /** Returns Triple(searchQuery, overlayTitle, overlaySubtitle) based on device GPS. */
+    @Suppress("DEPRECATION")
+    private suspend fun resolveLocationQuery(): Triple<String, String, String> =
+        withContext(Dispatchers.IO) {
+            try {
+                val ctx = context ?: return@withContext fallbackQuery()
+                val hasPermission = ContextCompat.checkSelfPermission(
+                    ctx, Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+                if (!hasPermission) return@withContext fallbackQuery()
+
+                val client = LocationServices.getFusedLocationProviderClient(ctx)
+                val location: Location? = Tasks.await(client.lastLocation, 5, TimeUnit.SECONDS)
+                if (location == null) return@withContext fallbackQuery()
+
+                val geocoder = Geocoder(ctx, Locale.getDefault())
+                val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
+                val city = addresses?.firstOrNull()?.locality
+                    ?: addresses?.firstOrNull()?.adminArea
+
+                if (city != null) {
+                    Log.d(TAG, "Device location: $city")
+                    Triple("cliff jumping $city", "Cliff Jumping", city)
+                } else {
+                    fallbackQuery()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Location resolve failed: $e")
+                fallbackQuery()
+            }
+        }
+
+    private fun fallbackQuery() = Triple("cliff jumping water", "Cliff Jumping", "Near You")
 
     private fun showError(message: String) {
         _binding?.loadingContainer?.visibility = View.GONE
@@ -179,6 +218,8 @@ class ReelsFragment : Fragment() {
 
     override fun onDestroyView() {
         Log.d(TAG, "onDestroyView")
+        adapter?.destroyAll()
+        _binding?.viewPager?.adapter = null
         super.onDestroyView()
         _binding = null
     }

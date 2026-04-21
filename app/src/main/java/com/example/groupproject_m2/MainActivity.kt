@@ -315,7 +315,7 @@ fun GroupProject_m2App(
                             if (it == AppDestinations.REELS) {
                                 context.startActivity(
                                     Intent(context, ReelsActivity::class.java).apply {
-                                        putExtra(ReelsActivity.EXTRA_SPOT_NAME, "cliff jumping water")
+                                        putExtra(ReelsActivity.EXTRA_SPOT_NAME, "")
                                         putExtra(ReelsActivity.EXTRA_SPOT_LOCATION, "")
                                     }
                                 )
