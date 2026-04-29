@@ -1,4 +1,4 @@
-package com.example.groupproject_m2
+﻿package com.example.groupproject_m2
 
 import android.Manifest
 import android.content.Context
@@ -261,7 +261,7 @@ fun MapScreen(onSpotClick: (CliffSpot) -> Unit = {}) {
         FloatingActionButton(
             onClick = { showAddDialog = true },
             modifier = Modifier
-                .align(Alignment.BottomEnd)
+                 .align(Alignment.BottomStart)
                 .padding(16.dp)
         ) {
             Icon(Icons.Default.Add, contentDescription = "Add cliff spot")
@@ -616,3 +616,4 @@ fun ListView(
         }
     }
 }
+
