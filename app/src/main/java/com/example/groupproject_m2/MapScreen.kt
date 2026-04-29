@@ -3,6 +3,7 @@ package com.example.groupproject_m2
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Geocoder
 import android.location.Location
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +28,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -41,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,8 +70,12 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Locale
 
 data class CliffSpot(
     val name: String,
@@ -88,6 +95,7 @@ private val defaultCliffSpots = listOf(
 
 private const val CLIFF_PREFS = "cliff_spot_prefs"
 private const val CLIFF_SPOTS_KEY = "cliff_spots_json"
+private val FALLBACK_CENTER = LatLng(39.5, -98.35)
 
 fun distanceBetween(userLat: Double, userLng: Double, spotLat: Double, spotLng: Double): Float {
     val results = FloatArray(1)
@@ -299,6 +307,19 @@ private fun loadSpots(context: Context): List<CliffSpot> {
     }
 }
 
+private suspend fun geocodeLocation(context: Context, query: String): LatLng? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val geocoder = Geocoder(context, Locale.US)
+            val matches = geocoder.getFromLocationName(query, 1)
+            val first = matches?.firstOrNull() ?: return@withContext null
+            LatLng(first.latitude, first.longitude)
+        } catch (_: Exception) {
+            null
+        }
+    }
+}
+
 @Composable
 fun MapView(
     hasLocationPermission: Boolean,
@@ -341,12 +362,16 @@ private fun AddCliffSpotDialog(
     onDismiss: () -> Unit,
     onAddSpot: (CliffSpot) -> Unit
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var name by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
     var height by remember { mutableStateOf("") }
     val difficultyOptions = listOf("Unknown", "Beginner", "Intermediate", "Advanced")
     var difficulty by remember { mutableStateOf("Unknown") }
     var difficultyExpanded by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+    var locationHint by remember { mutableStateOf("Use City, State (e.g., Waco, TX)") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -357,22 +382,26 @@ private fun AddCliffSpotDialog(
                     value = location,
                     onValueChange = { location = it },
                     label = { Text("Location*") },
+                    supportingText = { Text(locationHint) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isSaving
                 )
                 OutlinedTextField(
                     value = height,
                     onValueChange = { height = it.filter { ch -> ch.isDigit() } },
                     label = { Text("Height (ft)*") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isSaving
                 )
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Name (optional)") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isSaving
                 )
                 ExposedDropdownMenuBox(
                     expanded = difficultyExpanded,
@@ -386,9 +415,10 @@ private fun AddCliffSpotDialog(
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = difficultyExpanded) },
                         modifier = Modifier
                             .menuAnchor()
-                            .fillMaxWidth()
+                            .fillMaxWidth(),
+                        enabled = !isSaving
                     )
-                    ExposedDropdownMenu(
+                    DropdownMenu(
                         expanded = difficultyExpanded,
                         onDismissRequest = { difficultyExpanded = false }
                     ) {
@@ -408,27 +438,35 @@ private fun AddCliffSpotDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    val trimmedLocation = location.trim()
-                    val trimmedHeight = height.trim()
-                    val resolvedName = name.trim().ifBlank { trimmedLocation }
-                    val coordinates = userLocation ?: LatLng(39.5, -98.35)
-                    onAddSpot(
-                        CliffSpot(
-                            name = resolvedName,
-                            location = trimmedLocation,
-                            height = "$trimmedHeight ft",
-                            difficulty = difficulty,
-                            coordinates = coordinates
+                    scope.launch {
+                        isSaving = true
+                        val trimmedLocation = location.trim()
+                        val trimmedHeight = height.trim()
+                        val resolvedName = name.trim().ifBlank { trimmedLocation }
+                        val resolvedCoordinates = geocodeLocation(context, trimmedLocation)
+                        if (resolvedCoordinates == null) {
+                            locationHint = "Could not map location. Using current location."
+                        }
+                        val coordinates = resolvedCoordinates ?: userLocation ?: FALLBACK_CENTER
+                        onAddSpot(
+                            CliffSpot(
+                                name = resolvedName,
+                                location = trimmedLocation,
+                                height = "$trimmedHeight ft",
+                                difficulty = difficulty,
+                                coordinates = coordinates
+                            )
                         )
-                    )
+                        isSaving = false
+                    }
                 },
-                enabled = location.isNotBlank() && height.isNotBlank()
+                enabled = !isSaving && location.isNotBlank() && height.isNotBlank()
             ) {
-                Text("Add")
+                Text(if (isSaving) "Adding..." else "Add")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss, enabled = !isSaving) {
                 Text("Cancel")
             }
         }
@@ -545,3 +583,5 @@ fun ListView(
         }
     }
 }
+
+
