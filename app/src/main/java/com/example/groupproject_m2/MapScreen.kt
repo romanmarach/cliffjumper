@@ -1,16 +1,47 @@
 package com.example.groupproject_m2
 
 import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
 import android.location.Location
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -29,7 +61,14 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.*
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
+import org.json.JSONArray
+import org.json.JSONObject
 
 data class CliffSpot(
     val name: String,
@@ -39,13 +78,16 @@ data class CliffSpot(
     val coordinates: LatLng
 )
 
-val cliffSpots = listOf(
+private val defaultCliffSpots = listOf(
     CliffSpot("Blue Hole", "Santa Rosa, New Mexico", "25 ft", "Beginner", LatLng(34.9391, -104.6672)),
     CliffSpot("Havasupai Falls", "Grand Canyon, Arizona", "40 ft", "Intermediate", LatLng(36.2553, -112.6980)),
     CliffSpot("Lake Powell", "Page, Arizona", "60 ft", "Advanced", LatLng(36.9380, -111.4879)),
     CliffSpot("Red River Gorge", "Kentucky", "35 ft", "Intermediate", LatLng(37.7926, -83.6813)),
     CliffSpot("Sliding Rock", "Brevard, North Carolina", "20 ft", "Beginner", LatLng(35.2620, -82.8743))
 )
+
+private const val CLIFF_PREFS = "cliff_spot_prefs"
+private const val CLIFF_SPOTS_KEY = "cliff_spots_json"
 
 fun distanceBetween(userLat: Double, userLng: Double, spotLat: Double, spotLng: Double): Float {
     val results = FloatArray(1)
@@ -58,7 +100,21 @@ fun distanceBetween(userLat: Double, userLng: Double, spotLat: Double, spotLng: 
 fun MapScreen(onSpotClick: (CliffSpot) -> Unit = {}) {
     var isMapView by remember { mutableStateOf(true) }
     var userLocation by remember { mutableStateOf<LatLng?>(null) }
+    var spots by remember { mutableStateOf(defaultCliffSpots) }
+    var showAddDialog by remember { mutableStateOf(false) }
+    var hasLoadedSpots by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        spots = loadSpots(context)
+        hasLoadedSpots = true
+    }
+
+    LaunchedEffect(spots, hasLoadedSpots) {
+        if (hasLoadedSpots) {
+            saveSpots(context, spots)
+        }
+    }
 
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
 
@@ -82,26 +138,32 @@ fun MapScreen(onSpotClick: (CliffSpot) -> Unit = {}) {
                 }
             }
 
-            fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback,
-                android.os.Looper.getMainLooper()
-            )
+            val hasFineLocationPermission = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+
+            if (hasFineLocationPermission) {
+                fusedLocationClient.requestLocationUpdates(
+                    locationRequest,
+                    locationCallback,
+                    android.os.Looper.getMainLooper()
+                )
+            }
         }
     }
 
-    val sortedSpots = remember(userLocation) {
+    val sortedSpots = remember(userLocation, spots) {
         userLocation?.let { loc ->
-            cliffSpots.sortedBy { spot ->
+            spots.sortedBy { spot ->
                 distanceBetween(loc.latitude, loc.longitude, spot.coordinates.latitude, spot.coordinates.longitude)
             }
-        } ?: cliffSpots
+        } ?: spots
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-
         if (isMapView) {
-            MapView(locationPermission.status.isGranted, onSpotClick)
+            MapView(locationPermission.status.isGranted, spots, onSpotClick)
         } else {
             Column(
                 modifier = Modifier
@@ -113,7 +175,6 @@ fun MapScreen(onSpotClick: (CliffSpot) -> Unit = {}) {
             }
         }
 
-        // Floating segmented toggle
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -171,11 +232,79 @@ fun MapScreen(onSpotClick: (CliffSpot) -> Unit = {}) {
                 }
             }
         }
+
+        FloatingActionButton(
+            onClick = { showAddDialog = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Add cliff spot")
+        }
+
+        if (showAddDialog) {
+            AddCliffSpotDialog(
+                userLocation = userLocation,
+                onDismiss = { showAddDialog = false },
+                onAddSpot = { spot ->
+                    spots = spots + spot
+                    showAddDialog = false
+                }
+            )
+        }
+    }
+}
+
+private fun saveSpots(context: Context, spots: List<CliffSpot>) {
+    val array = JSONArray()
+    spots.forEach { spot ->
+        val obj = JSONObject().apply {
+            put("name", spot.name)
+            put("location", spot.location)
+            put("height", spot.height)
+            put("difficulty", spot.difficulty)
+            put("lat", spot.coordinates.latitude)
+            put("lng", spot.coordinates.longitude)
+        }
+        array.put(obj)
+    }
+    context.getSharedPreferences(CLIFF_PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .putString(CLIFF_SPOTS_KEY, array.toString())
+        .apply()
+}
+
+private fun loadSpots(context: Context): List<CliffSpot> {
+    val raw = context.getSharedPreferences(CLIFF_PREFS, Context.MODE_PRIVATE)
+        .getString(CLIFF_SPOTS_KEY, null) ?: return defaultCliffSpots
+
+    return try {
+        val array = JSONArray(raw)
+        buildList {
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                add(
+                    CliffSpot(
+                        name = obj.optString("name"),
+                        location = obj.optString("location"),
+                        height = obj.optString("height"),
+                        difficulty = obj.optString("difficulty", "Unknown"),
+                        coordinates = LatLng(obj.optDouble("lat"), obj.optDouble("lng"))
+                    )
+                )
+            }
+        }.ifEmpty { defaultCliffSpots }
+    } catch (_: Exception) {
+        defaultCliffSpots
     }
 }
 
 @Composable
-fun MapView(hasLocationPermission: Boolean, onSpotClick: (CliffSpot) -> Unit) {
+fun MapView(
+    hasLocationPermission: Boolean,
+    spots: List<CliffSpot>,
+    onSpotClick: (CliffSpot) -> Unit
+) {
     val usCenter = LatLng(39.5, -98.35)
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(usCenter, 4f)
@@ -190,11 +319,11 @@ fun MapView(hasLocationPermission: Boolean, onSpotClick: (CliffSpot) -> Unit) {
             zoomControlsEnabled = true
         )
     ) {
-        cliffSpots.forEach { spot ->
+        spots.forEach { spot ->
             Marker(
                 state = MarkerState(position = spot.coordinates),
                 title = spot.name,
-                snippet = "${spot.location} • ${spot.height} • ${spot.difficulty}",
+                snippet = "${spot.location} - ${spot.height} - ${spot.difficulty}",
                 onClick = {
                     it.showInfoWindow()
                     false
@@ -203,6 +332,107 @@ fun MapView(hasLocationPermission: Boolean, onSpotClick: (CliffSpot) -> Unit) {
             )
         }
     }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun AddCliffSpotDialog(
+    userLocation: LatLng?,
+    onDismiss: () -> Unit,
+    onAddSpot: (CliffSpot) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var location by remember { mutableStateOf("") }
+    var height by remember { mutableStateOf("") }
+    val difficultyOptions = listOf("Unknown", "Beginner", "Intermediate", "Advanced")
+    var difficulty by remember { mutableStateOf("Unknown") }
+    var difficultyExpanded by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Cliff Spot") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = location,
+                    onValueChange = { location = it },
+                    label = { Text("Location*") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = height,
+                    onValueChange = { height = it.filter { ch -> ch.isDigit() } },
+                    label = { Text("Height (ft)*") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name (optional)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                ExposedDropdownMenuBox(
+                    expanded = difficultyExpanded,
+                    onExpandedChange = { difficultyExpanded = !difficultyExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = difficulty,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Difficulty") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = difficultyExpanded) },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = difficultyExpanded,
+                        onDismissRequest = { difficultyExpanded = false }
+                    ) {
+                        difficultyOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    difficulty = option
+                                    difficultyExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val trimmedLocation = location.trim()
+                    val trimmedHeight = height.trim()
+                    val resolvedName = name.trim().ifBlank { trimmedLocation }
+                    val coordinates = userLocation ?: LatLng(39.5, -98.35)
+                    onAddSpot(
+                        CliffSpot(
+                            name = resolvedName,
+                            location = trimmedLocation,
+                            height = "$trimmedHeight ft",
+                            difficulty = difficulty,
+                            coordinates = coordinates
+                        )
+                    )
+                },
+                enabled = location.isNotBlank() && height.isNotBlank()
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -274,7 +504,7 @@ fun ListView(
                                     .padding(horizontal = 8.dp, vertical = 3.dp)
                             ) {
                                 Text(
-                                    text = "${spot.height}",
+                                    text = spot.height,
                                     fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     fontWeight = FontWeight.Medium
@@ -305,7 +535,7 @@ fun ListView(
                     }
 
                     Icon(
-                        Icons.Default.ChevronRight,
+                        imageVector = Icons.Default.ChevronRight,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
