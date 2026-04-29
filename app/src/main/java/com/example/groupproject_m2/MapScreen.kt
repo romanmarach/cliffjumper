@@ -27,8 +27,8 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -110,6 +110,8 @@ fun MapScreen(onSpotClick: (CliffSpot) -> Unit = {}) {
     var userLocation by remember { mutableStateOf<LatLng?>(null) }
     var spots by remember { mutableStateOf(defaultCliffSpots) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var showPressureTool by remember { mutableStateOf(false) }
+    var draftHeightFeet by remember { mutableStateOf("") }
     var hasLoadedSpots by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
@@ -170,6 +172,21 @@ fun MapScreen(onSpotClick: (CliffSpot) -> Unit = {}) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        if (showPressureTool) {
+            PressureMeasurementScreen(
+                onUseHeightFeet = { measuredFeet ->
+                    draftHeightFeet = measuredFeet.toInt().toString()
+                    showPressureTool = false
+                    showAddDialog = true
+                },
+                onClose = {
+                    showPressureTool = false
+                    showAddDialog = true
+                }
+            )
+            return@Box
+        }
+
         if (isMapView) {
             MapView(locationPermission.status.isGranted, spots, onSpotClick)
         } else {
@@ -253,9 +270,16 @@ fun MapScreen(onSpotClick: (CliffSpot) -> Unit = {}) {
         if (showAddDialog) {
             AddCliffSpotDialog(
                 userLocation = userLocation,
+                initialHeightFeet = draftHeightFeet,
+                onOpenPressureTool = { currentHeight ->
+                    draftHeightFeet = currentHeight
+                    showAddDialog = false
+                    showPressureTool = true
+                },
                 onDismiss = { showAddDialog = false },
                 onAddSpot = { spot ->
                     spots = spots + spot
+                    draftHeightFeet = ""
                     showAddDialog = false
                 }
             )
@@ -359,6 +383,8 @@ fun MapView(
 @OptIn(ExperimentalMaterial3Api::class)
 private fun AddCliffSpotDialog(
     userLocation: LatLng?,
+    initialHeightFeet: String,
+    onOpenPressureTool: (String) -> Unit,
     onDismiss: () -> Unit,
     onAddSpot: (CliffSpot) -> Unit
 ) {
@@ -366,7 +392,7 @@ private fun AddCliffSpotDialog(
     val scope = rememberCoroutineScope()
     var name by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
-    var height by remember { mutableStateOf("") }
+    var height by remember(initialHeightFeet) { mutableStateOf(initialHeightFeet) }
     val difficultyOptions = listOf("Unknown", "Beginner", "Intermediate", "Advanced")
     var difficulty by remember { mutableStateOf("Unknown") }
     var difficultyExpanded by remember { mutableStateOf(false) }
@@ -395,6 +421,13 @@ private fun AddCliffSpotDialog(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isSaving
                 )
+                TextButton(
+                    onClick = { onOpenPressureTool(height.trim()) },
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Measure with pressure sensor")
+                }
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -583,5 +616,3 @@ fun ListView(
         }
     }
 }
-
-
