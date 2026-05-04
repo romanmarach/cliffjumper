@@ -1,16 +1,24 @@
-package com.example.groupproject_m2
+﻿package com.example.groupproject_m2
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import android.content.Intent
 import androidx.compose.material.icons.filled.AccountBox
@@ -19,6 +27,8 @@ import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -32,12 +42,15 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -296,11 +309,22 @@ fun GroupProject_m2App(
     val context = LocalContext.current
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
     var selectedSpot by remember { mutableStateOf<CliffSpot?>(null) }
+    val likedSpots = remember { mutableStateListOf<CliffSpot>() }
 
     if (selectedSpot != null) {
+        val spot = selectedSpot!!
+        val isLiked = likedSpots.contains(spot)
         DetailScreen(
-            spot = selectedSpot!!,
+            spot = spot,
             weatherApiKey = "af5cdfa47871a592fb68ea185f67f94b",
+            isLiked = isLiked,
+            onToggleLike = {
+                if (likedSpots.contains(spot)) {
+                    likedSpots.remove(spot)
+                } else {
+                    likedSpots.add(spot)
+                }
+            },
             onBackClick = { selectedSpot = null }
         )
     } else {
@@ -345,12 +369,108 @@ fun GroupProject_m2App(
                         AppDestinations.HOME -> MapScreen(
                             onSpotClick = { spot -> selectedSpot = spot }
                         )
-                        AppDestinations.FAVORITES -> PressureMeasurementScreen()
+                        AppDestinations.FAVORITES -> LikedSpotsScreen(
+                            spots = likedSpots,
+                            onSpotClick = { spot -> selectedSpot = spot }
+                        )
                         AppDestinations.REELS -> { /* launched as Activity, nothing to render */ }
                         AppDestinations.PROFILE -> Text(
                             "Profile Screen - Coming Soon",
                             modifier = Modifier.padding(16.dp)
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LikedSpotsScreen(
+    spots: List<CliffSpot>,
+    onSpotClick: (CliffSpot) -> Unit
+) {
+    if (spots.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            Text("No liked cliffs yet")
+        }
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(bottom = 16.dp)
+    ) {
+        items(spots) { spot ->
+            val difficultyColor = when (spot.difficulty) {
+                "Beginner" -> androidx.compose.ui.graphics.Color(0xFF2E7D32)
+                "Intermediate" -> androidx.compose.ui.graphics.Color(0xFFF9A825)
+                "Advanced" -> androidx.compose.ui.graphics.Color(0xFFC62828)
+                else -> androidx.compose.ui.graphics.Color.Gray
+            }
+
+            Card(
+                onClick = { onSpotClick(spot) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(3.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(4.dp)
+                            .height(60.dp)
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
+                            .background(difficultyColor)
+                    )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = spot.name,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = spot.location,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = spot.height,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                                    .background(difficultyColor.copy(alpha = 0.15f))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = spot.difficulty,
+                                    color = difficultyColor,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -391,5 +511,8 @@ fun AppPreview() {
         GroupProject_m2App(onLogoutClick = {})
     }
 }
+
+
+
 
 

@@ -110,12 +110,13 @@ suspend fun fetchWeather(lat: Double, lng: Double, apiKey: String): WeatherData?
 fun DetailScreen(
     spot: CliffSpot,
     weatherApiKey: String,
+    isLiked: Boolean,
+    onToggleLike: () -> Unit,
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
     var weatherData by remember { mutableStateOf<WeatherData?>(null) }
     var isLoading by remember { mutableStateOf(true) }
-    var isSaved by remember { mutableStateOf(false) }
 
     val heightFt = spot.height.replace(" ft", "").toDoubleOrNull() ?: 0.0
 
@@ -145,11 +146,11 @@ fun DetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { isSaved = !isSaved }) {
+                    IconButton(onClick = onToggleLike) {
                         Icon(
-                            if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = "Save",
-                            tint = if (isSaved) Color(0xFFC62828) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            tint = if (isLiked) Color(0xFFC62828) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                     }
                 },
@@ -339,3 +340,4 @@ fun DetailScreen(
         }
     }
 }
+
