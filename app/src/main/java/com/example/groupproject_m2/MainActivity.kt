@@ -374,9 +374,9 @@ fun GroupProject_m2App(
                             onSpotClick = { spot -> selectedSpot = spot }
                         )
                         AppDestinations.REELS -> { /* launched as Activity, nothing to render */ }
-                        AppDestinations.PROFILE -> Text(
-                            "Profile Screen - Coming Soon",
-                            modifier = Modifier.padding(16.dp)
+                        AppDestinations.PROFILE -> ProfileScreen(
+                            likedSpotsCount = likedSpots.size,
+                            onLogoutClick = onLogoutClick
                         )
                     }
                 }
@@ -511,8 +511,3 @@ fun AppPreview() {
         GroupProject_m2App(onLogoutClick = {})
     }
 }
-
-
-
-
-
