@@ -21,10 +21,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -44,7 +44,10 @@ private sealed interface PressureCaptureResult {
 }
 
 @Composable
-fun PressureMeasurementScreen() {
+fun PressureMeasurementScreen(
+    onUseHeightFeet: ((Double) -> Unit)? = null,
+    onClose: (() -> Unit)? = null
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -152,9 +155,29 @@ fun PressureMeasurementScreen() {
                     pressure2 = null
                     errorMessage = null
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.weight(1f)
             ) {
                 Text("Reset")
+            }
+
+            if (onClose != null) {
+                OutlinedButton(
+                    onClick = onClose,
+                    enabled = !isCapturing,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Back")
+                }
+            }
+        }
+
+        if (onUseHeightFeet != null) {
+            Button(
+                onClick = { heightFeet?.let(onUseHeightFeet) },
+                enabled = !isCapturing && heightFeet != null,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Use this height")
             }
         }
     }
@@ -236,5 +259,3 @@ private suspend fun capturePressureOnce(context: Context): PressureCaptureResult
         }
     }
 }
-
-
