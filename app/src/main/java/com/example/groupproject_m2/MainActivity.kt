@@ -2,6 +2,7 @@
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,6 +42,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,10 +57,13 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.groupproject_m2.ui.theme.GroupProject_m2Theme
+import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import org.json.JSONArray
+import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -309,15 +314,23 @@ fun GroupProject_m2App(
     val context = LocalContext.current
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
     var selectedSpot by remember { mutableStateOf<CliffSpot?>(null) }
-    val likedSpots = remember { mutableStateListOf<CliffSpot>() }
+    val likedSpots = remember {
+        mutableStateListOf<CliffSpot>().also { list ->
+            list.addAll(loadLikedSpots(context))
+        }
+    }
+
+    LaunchedEffect(likedSpots.size) {
+        saveLikedSpots(context, likedSpots)
+    }
 
     if (selectedSpot != null) {
         val spot = selectedSpot!!
         val isLiked = likedSpots.contains(spot)
         DetailScreen(
             spot = spot,
-            weatherApiKey = "af5cdfa47871a592fb68ea185f67f94b",
-            isLiked = isLiked,
+            weatherApiKey = BuildConfig.WEATHER_API_KEY,
+                    isLiked = isLiked,
             onToggleLike = {
                 if (likedSpots.contains(spot)) {
                     likedSpots.remove(spot)
@@ -373,7 +386,7 @@ fun GroupProject_m2App(
                             spots = likedSpots,
                             onSpotClick = { spot -> selectedSpot = spot }
                         )
-                        AppDestinations.REELS -> { /* launched as Activity, nothing to render */ }
+                        AppDestinations.REELS -> { /* launched as Activity */ }
                         AppDestinations.PROFILE -> ProfileScreen(
                             likedSpotsCount = likedSpots.size,
                             onLogoutClick = onLogoutClick
@@ -475,6 +488,47 @@ private fun LikedSpotsScreen(
                 }
             }
         }
+    }
+}
+
+private fun saveLikedSpots(context: Context, spots: List<CliffSpot>) {
+    val array = JSONArray()
+    spots.forEach { spot ->
+        val obj = JSONObject().apply {
+            put("name", spot.name)
+            put("location", spot.location)
+            put("height", spot.height)
+            put("difficulty", spot.difficulty)
+            put("lat", spot.coordinates.latitude)
+            put("lng", spot.coordinates.longitude)
+        }
+        array.put(obj)
+    }
+    context.getSharedPreferences("liked_spots_prefs", Context.MODE_PRIVATE)
+        .edit()
+        .putString("liked_spots_json", array.toString())
+        .apply()
+}
+
+private fun loadLikedSpots(context: Context): List<CliffSpot> {
+    val raw = context.getSharedPreferences("liked_spots_prefs", Context.MODE_PRIVATE)
+        .getString("liked_spots_json", null) ?: return emptyList()
+    return try {
+        val array = JSONArray(raw)
+        buildList {
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                add(CliffSpot(
+                    name = obj.optString("name"),
+                    location = obj.optString("location"),
+                    height = obj.optString("height"),
+                    difficulty = obj.optString("difficulty"),
+                    coordinates = LatLng(obj.optDouble("lat"), obj.optDouble("lng"))
+                ))
+            }
+        }
+    } catch (_: Exception) {
+        emptyList()
     }
 }
 
