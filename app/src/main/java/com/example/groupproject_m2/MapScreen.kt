@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.location.Location
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -96,6 +97,7 @@ private val defaultCliffSpots = listOf(
 private const val CLIFF_PREFS = "cliff_spot_prefs"
 private const val CLIFF_SPOTS_KEY = "cliff_spots_json"
 private val FALLBACK_CENTER = LatLng(39.5, -98.35)
+private const val MAP_TAG = "MapScreen"
 
 fun distanceBetween(userLat: Double, userLng: Double, spotLat: Double, spotLng: Double): Float {
     val results = FloatArray(1)
@@ -334,11 +336,18 @@ private fun loadSpots(context: Context): List<CliffSpot> {
 private suspend fun geocodeLocation(context: Context, query: String): LatLng? {
     return withContext(Dispatchers.IO) {
         try {
+            Log.d(MAP_TAG, "Geocode request: query=\"$query\"")
             val geocoder = Geocoder(context, Locale.US)
             val matches = geocoder.getFromLocationName(query, 1)
             val first = matches?.firstOrNull() ?: return@withContext null
-            LatLng(first.latitude, first.longitude)
-        } catch (_: Exception) {
+            val resolved = LatLng(first.latitude, first.longitude)
+            Log.d(
+                MAP_TAG,
+                "Geocode result: lat=${resolved.latitude}, lng=${resolved.longitude}, fullAddress=${first.getAddressLine(0)}"
+            )
+            resolved
+        } catch (e: Exception) {
+            Log.e(MAP_TAG, "Geocode failed for query=\"$query\"", e)
             null
         }
     }
@@ -616,4 +625,6 @@ fun ListView(
         }
     }
 }
+
+
 

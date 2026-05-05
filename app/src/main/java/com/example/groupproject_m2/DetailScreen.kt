@@ -1,21 +1,27 @@
-package com.example.groupproject_m2
+﻿package com.example.groupproject_m2
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.sqrt
 
@@ -86,20 +93,39 @@ fun calculateSafetyScore(
 
 suspend fun fetchWeather(lat: Double, lng: Double, apiKey: String): WeatherData? {
     return withContext(Dispatchers.IO) {
+        val requestUrl = "https://api.openweathermap.org/data/2.5/weather?lat=$lat&lon=$lng&appid=$apiKey&units=imperial"
+        val safeRequestUrl = requestUrl.replace(apiKey, "***REDACTED***")
+
         try {
-            val url = "https://api.openweathermap.org/data/2.5/weather?lat=$lat&lon=$lng&appid=$apiKey&units=imperial"
-            val response = URL(url).readText()
+            val connection = URL(requestUrl).openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            val statusCode = connection.responseCode
+            val response = connection.inputStream.bufferedReader().use { it.readText() }
+
+            Log.d("DetailScreen", "OpenWeather request: $safeRequestUrl")
+            Log.d("DetailScreen", "OpenWeather HTTP status: $statusCode")
+            Log.d("DetailScreen", "OpenWeather response: ${response.take(600)}")
+
             val json = JSONObject(response)
             val main = json.getJSONObject("main")
             val wind = json.getJSONObject("wind")
             val weather = json.getJSONArray("weather").getJSONObject(0)
-            WeatherData(
+
+            val parsed = WeatherData(
                 temperature = main.getDouble("temp"),
                 windSpeed = wind.getDouble("speed"),
                 description = weather.getString("description"),
                 feelsLike = main.getDouble("feels_like")
             )
+
+            Log.d(
+                "DetailScreen",
+                "Parsed weather -> temp=${parsed.temperature}, wind=${parsed.windSpeed}, feelsLike=${parsed.feelsLike}, desc=${parsed.description}"
+            )
+
+            parsed
         } catch (e: Exception) {
+            Log.e("DetailScreen", "OpenWeather request failed", e)
             null
         }
     }
@@ -164,7 +190,6 @@ fun DetailScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Hero Banner
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -200,8 +225,6 @@ fun DetailScreen(
             }
 
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-
-                // Height Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -217,7 +240,6 @@ fun DetailScreen(
                     }
                 }
 
-                // Safety Score Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -245,7 +267,6 @@ fun DetailScreen(
                     }
                 }
 
-                // Weather Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -287,7 +308,6 @@ fun DetailScreen(
                     }
                 }
 
-                // Physics Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -314,7 +334,6 @@ fun DetailScreen(
                     }
                 }
 
-                // Watch Reels Button
                 Button(
                     onClick = { ReelsActivity.start(context, spot.name, spot.location) },
                     modifier = Modifier.fillMaxWidth(),
@@ -340,4 +359,3 @@ fun DetailScreen(
         }
     }
 }
-
